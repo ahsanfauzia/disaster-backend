@@ -6,7 +6,6 @@ dotenv.config();
 
 const app = express();
 
-// ✅ CORS (safe for mobile + Vercel)
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "OPTIONS"],
@@ -14,19 +13,17 @@ app.use(cors({
 
 app.use(express.json());
 
-// ✅ API KEY
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-if (!GROQ_API_KEY) {
-  console.log("❌ GROQ_API_KEY missing in environment");
-}
+// Debug check
+console.log("API KEY:", GROQ_API_KEY ? "Loaded" : "Missing");
 
-// ✅ TEST ROUTE
+// Test route
 app.get("/", (req, res) => {
   res.send("Server is running 🚀");
 });
 
-// ✅ CHAT ROUTE
+// Chat route
 app.post("/chat", async (req, res) => {
   try {
     const messages = req.body.messages;
@@ -44,7 +41,7 @@ app.post("/chat", async (req, res) => {
           Authorization: `Bearer ${GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
+          model: "llama3-8b-8192", // safer model
           messages: messages,
           temperature: 0.7,
           max_tokens: 512,
@@ -55,8 +52,10 @@ app.post("/chat", async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.log("GROQ ERROR:", data);
-      return res.status(response.status).json(data);
+      console.log("GROQ ERROR:", JSON.stringify(data, null, 2));
+      return res.status(response.status).json({
+        error: data?.error?.message || "Groq API error",
+      });
     }
 
     res.json(data);
@@ -67,7 +66,6 @@ app.post("/chat", async (req, res) => {
   }
 });
 
-// ✅ RENDER PORT
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
